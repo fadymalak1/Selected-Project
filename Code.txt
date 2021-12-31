@@ -1,0 +1,218 @@
+#Code ANN
+
+import cv2
+import os
+import numpy as np
+from sklearn import metrics
+from tensorflow.keras.utils import to_categorical
+from sklearn.metrics import confusion_matrix, accuracy_score
+import tensorflow as tf
+from tensorflow import keras
+from sklearn.model_selection import train_test_split
+from sklearn import preprocessing
+from keras.applications.vgg16 import VGG16
+from sklearn.metrics import roc_curve, auc
+from sklearn.metrics import accuracy_score
+from sklearn.preprocessing import label_binarize
+import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt    
+data_path = r"E:\data\trian"
+img_size=256             
+counter=0            
+X=[]
+Y=[]
+categories=os.listdir(data_path)
+ 
+for category in categories:                                                            # this loop to know how many images in categories
+    folder_path=os.path.join(data_path,category)                                       # make folder empty has the same path for dataset
+    img_names=os.listdir(folder_path)                                                  # put each image in this folder
+ 
+    for img_name in img_names:
+        img_path=os.path.join(folder_path,img_name)
+        fullpath=os.path.join(data_path,category,img_name)
+        try:
+            img = cv2.imread(fullpath, cv2.IMREAD_COLOR)
+            img = cv2.resize(img, (img_size,img_size))
+            img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+            X.append(img)
+            Y.append(category)
+            counter+=1
+            print("Reprocessing Image Number: ",counter)
+        except:
+            print("Error in ==> ",counter)
+ 
+imgs=np.array(X)
+lbls=np.array(Y)
+ 
+#Label Encoding
+le = preprocessing.LabelEncoder()
+le.fit(lbls)
+lbls_encoded = le.transform(lbls)
+ 
+#Train and Test Split
+train_x, test_x,train_y, test_y = train_test_split(imgs,lbls_encoded,test_size=0.1)
+ 
+#Normalization
+train_x, test_x = train_x / 255.0,  test_x / 255.0
+#Feature Extraction
+VGG_model = VGG16(weights='imagenet', include_top=False, input_shape=(img_size,img_size, 3))
+ 
+for layer in VGG_model.layers:
+	layer.trainable = False
+ 
+VGG_model.summary()  
+feature_extractor=VGG_model.predict(train_x)
+features = feature_extractor.reshape(feature_extractor.shape[0], -1)
+X_for_RF = features
+feature_extractor_test=VGG_model.predict(test_x)
+features_test = feature_extractor_test.reshape(feature_extractor_test.shape[0], -1)
+model = keras.models.Sequential([
+    keras.layers.Flatten(),
+    keras.layers.Dense(300, activation="relu"),
+    keras.layers.Dense(100, activation="relu"),
+    keras.layers.Dense(10, activation="softmax")])
+model.compile(loss="sparse_categorical_crossentropy",optimizer="sgd",metrics=["accuracy"])
+ann=model.fit(X_for_RF, train_y, epochs=30,validation_data=(features_test, test_y))
+y_preds = model.predict(features_test).argmax(axis=1)
+Accuracy = accuracy_score(test_y,y_preds)
+print("Accuracy :", Accuracy)
+#----------------------------------loss----------------
+print("Loss Curve :")
+plt.plot(ann.history['loss'])
+plt.plot(ann.history['val_loss'])
+plt.title('Model loss')
+plt.ylabel('Loss')
+plt.xlabel('Epoch')
+plt.legend(['Train', 'Val'], loc='upper right')
+plt.show()
+ 
+#---------------------confusion_matrix----------------
+cm = confusion_matrix(test_y, y_preds)
+print("Confusion Matrix :")
+print(cm)
+#----------------------roc----------------------------
+n_classes=5;
+test_y2 = label_binarize(test_y, classes=[0,1,2,3,4,5])
+pred2 = label_binarize(y_preds, classes=[0,1,2,3,4,5])
+fpr = dict()
+tpr = dict()
+roc_auc = dict()
+for i in range(5):
+    fpr[i], tpr[i], _ = roc_curve(test_y2[:, i], pred2[:, i])
+    roc_auc[i] = auc(fpr[i], tpr[i])
+# Plot of a ROC curve for a specific class
+for i in range(5):
+    plt.figure()
+    plt.plot(fpr[i], tpr[i], label='ROC curve (area = %0.2f)' % roc_auc[i])
+    plt.plot([0, 1], [0, 1], 'k--')
+    plt.xlim([0.0, 1.0])
+    plt.ylim([0.0, 1.05])
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    plt.title('Receiver operating characteristic example')
+    plt.legend(loc="lower right")
+    plt.show()
+
+
+
+
+#Code SVM
+import cv2
+import os
+import numpy as np
+from sklearn import metrics
+from tensorflow.keras.utils import to_categorical
+from sklearn.model_selection import train_test_split
+from sklearn import preprocessing
+from sklearn.svm import SVC
+import matplotlib.pyplot as plt
+from sklearn.metrics import roc_curve, auc
+from sklearn.preprocessing import label_binarize
+from keras.applications.vgg16 import VGG16
+from sklearn.metrics import confusion_matrix, accuracy_score
+import matplotlib.pyplot as plt
+from sklearn.metrics import plot_confusion_matrix
+#import matplotlib.pyplot as plt    
+data_path = r"E:\data\trian"
+img_size=256             
+counter=0            
+X=[]
+Y=[]
+categories=os.listdir(data_path)
+ 
+for category in categories:                                                            # this loop to know how many images in categories
+    folder_path=os.path.join(data_path,category)                                       # make folder empty has the same path for dataset
+    img_names=os.listdir(folder_path)                                                  # put each image in this folder
+ 
+    for img_name in img_names:
+        img_path=os.path.join(folder_path,img_name)
+        fullpath=os.path.join(data_path,category,img_name)
+        try:
+            img = cv2.imread(fullpath, cv2.IMREAD_COLOR)
+            img = cv2.resize(img, (img_size,img_size))
+            img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+            X.append(img)
+            Y.append(category)
+            counter+=1
+            print("Reprocessing Image Number: ",counter)
+        except:
+            print("Error in ==> ",counter)
+ 
+imgs=np.array(X)
+lbls=np.array(Y)
+ 
+#Label Encoding
+le = preprocessing.LabelEncoder()
+le.fit(lbls)
+lbls_encoded = le.transform(lbls)
+ 
+#Train and Test Split
+train_x, test_x,train_y, test_y = train_test_split(imgs,lbls_encoded,test_size=0.1)
+ 
+train_x, test_x = train_x / 255.0,  test_x / 255.0
+VGG_model = VGG16(weights='imagenet', include_top=False, input_shape=(img_size,img_size, 3))
+for layer in VGG_model.layers:
+	layer.trainable = False    
+VGG_model.summary()  
+feature_extractor=VGG_model.predict(train_x)
+features = feature_extractor.reshape(feature_extractor.shape[0], -1)
+X_for_RF = features
+#-------
+classifier = SVC()
+classifier.fit(X_for_RF, train_y)
+score_trian = classifier.score(X_for_RF, train_y)
+feature_extractor_test=VGG_model.predict(test_x)
+features_test = feature_extractor_test.reshape(feature_extractor_test.shape[0], -1)
+# Predicting the results 
+y_pred=classifier.predict(features_test)
+accuracy=accuracy_score(test_y,y_pred)
+print(accuracy)
+#----------------------confusion_matrix--------------------------
+cm = confusion_matrix(test_y, y_pred)
+print("Confusion Matrix :")
+print(cm)
+#plot_confusion_matrix(classifier,features_test, test_y)  
+plt.show()
+#---------------------------------------------
+n_classes=5;
+test_y2 = label_binarize(test_y, classes=[0,1,2,3,4,5])
+pred2 = label_binarize(y_pred, classes=[0,1,2,3,4,5])
+fpr = dict()
+tpr = dict()
+roc_auc = dict()
+for i in range(5):
+    fpr[i], tpr[i], _ = roc_curve(test_y2[:, i], pred2[:, i])
+    roc_auc[i] = auc(fpr[i], tpr[i])
+ 
+# Plot of a ROC curve for a specific class
+for i in range(5):
+    plt.figure()
+    plt.plot(fpr[i], tpr[i], label='ROC curve (area = %0.2f)' % roc_auc[i])
+    plt.plot([0, 1], [0, 1], 'k--')
+    plt.xlim([0.0, 1.0])
+    plt.ylim([0.0, 1.05])
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    plt.title('Receiver operating characteristic example')
+    plt.legend(loc="lower right")
+    plt.show()
